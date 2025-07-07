@@ -8,38 +8,43 @@ WHITE_COLOUR='\e[0m'
 HEADER="[${BLUE_COLOUR}AUTO KBL${WHITE_COLOUR}]"
 
 # Set name of keyboard
-KEYBOARD_NAME="Logitech G513 RGB MECHANICAL GAMING KEYBOARD"
+#KEYBOARD_NAME="Logitech G513 RGB MECHANICAL GAMING KEYBOARD
 
-# Find the device ID of the keyboard
-DEVICE_ID=$(xinput list --id-only "$(xinput list --name-only | grep -i "$KEYBOARD_NAME" | head -n 1)")
+mapfile -t listFile < ~/.config/autoKBL.list
 
-# Check if a device ID was found
-if [ -z "$DEVICE_ID" ]; then
-    	echo -e "$HEADER Keyboard $KEYBOARD_NAME not detected."
-	exit 1
-fi
+for line in "${listFile[@]}"; do
+    LAYOUT=$(echo ${line} | cut -d '|' -f 1)
+    KEYBOARD_NAME=$(echo ${line} | cut -d '|' -f 2)
+    # Find the device ID of the keyboard
+    DEVICE_ID=$(xinput list --id-only "keyboard:""$KEYBOARD_NAME" 2>~/.temp/autoKBL.log)
+    # Check if a device ID was found
+    if [ -z "$DEVICE_ID" ]; then
+      	echo -e "$HEADER Keyboard $KEYBOARD_NAME not detected."
+    else
+        echo -e "$HEADER Keyboard $KEYBOARD_NAME detected with device ID $DEVICE_ID."
 
-echo -e "$HEADER Keyboard $KEYBOARD_NAME detected with device ID $DEVICE_ID."
+        # Find current layout
+        #CURR_LAYOUT=$(setxkbmap -device $DEVICE_ID -query | grep layout | awk '{print $2}')
 
-# Find current layout
-LAYOUT=$(setxkbmap -device $DEVICE_ID -query | grep layout | awk '{print $2}')
+        #if [ -z "$CURR_LAYOUT" ]; then
+	#    exit 1
+        #else
+        #If not gb then update to gb
+        #    if [[ "$CURR_LAYOUT" != "$LAYOUT" ]]; then
+       	#       echo -e "$HEADER Device layout is '$CURR_LAYOUT', switching to '$LAYOUT'."
+                # Set the keyboard layout to GB
+	        setxkbmap -device "$DEVICE_ID" -layout "$LAYOUT"
 
-if [ -z "$LAYOUT" ]; then
-	exit 1
-else
-# If not gb then update to gb
-	if [[ "$LAYOUT" != "gb" ]]; then
-        	echo -e "$HEADER Device layout is '$LAYOUT', switching to 'gb'."
-# Set the keyboard layout to GB
-		setxkbmap -device "$DEVICE_ID" -layout gb
-
-		if [ $? -eq 0 ]; then
-			echo -e "$HEADER $KEYBOARD_NAME ($DEVICE_ID) layout set to 'gb'."
-		else
-    			echo -e "$HEADER Failed to modify keyboard layout."
-    			exit 1
-		fi
-	else
-        	echo -e "$HEADER Device layout is '$LAYOUT', switch not required."
-	fi
-fi
+	        if [ $? -eq 0 ]; then
+	            echo -e "$HEADER $KEYBOARD_NAME ($DEVICE_ID) layout set to $LAYOUT."
+	        else
+    	            echo -e "$HEADER Failed to modify keyboard layout."
+    	            exit 1
+	        fi
+        #    else
+       	#        echo -e "$HEADER Device layout is '$LAYOUT', switch not required."
+        #    fi
+        #fi
+    fi
+done
+touch ~/.temp/autoKBL
