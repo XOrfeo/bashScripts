@@ -7,56 +7,62 @@ WHITE_COLOUR='\e[0m'
 # Set script echo header
 HEADER="[${BLUE_COLOUR}AUTO KBL${WHITE_COLOUR}]"
 
-# Set name of keyboard
-#KEYBOARD_NAME="Logitech G513 RGB MECHANICAL GAMING KEYBOARD
-
+log()
+{
+	read -t 0.01 MESSAGE
+	echo -e "$HEADER $MESSAGE" #| tee -a ~/.temp/autoKBL
+}
 
 if [ ! -f ~/.temp/autoKBL ]; then
-    touch ~/.temp/autoKBL
+	touch ~/.temp/autoKBL
+	echo "$(date '+%F_%H:%M:%S')" >> ~/.temp/autoKBL
+else
+	echo "$(date '+%F_%H:%M:%S')" >> ~/.temp/autoKBL
 fi
 
 if [ ! -f ~/.config/autoKBL.list ];then
-    echo -e "$HEADER Config file '~/.config/autoKBL.list' is missing, exiting autoKBL..."
-    exit 1
-else
-    if [ $(wc -l ~/.config/autoKBL.list | cut -d ' ' -f 1 ) -eq "0" ]; then
-	echo -e "$HEADER Config file empty, exiting autoKBL..."
+	echo -e "Config file '~/.config/autoKBL.list' is missing." | tee -a ~/.temp/autoKBL | log
 	exit 1
-    else
-	mapfile -t listFile < ~/.config/autoKBL.list
-    fi
+else
+	if [ $(wc -l ~/.config/autoKBL.list | cut -d ' ' -f 1 ) -eq "0" ]; then
+		log "Config file empty."
+		exit 1
+	else
+		mapfile -t listFile < ~/.config/autoKBL.list
+	fi
 fi
 
 DEVICE_COUNT=0
 
 for line in "${listFile[@]}"; do
 
-    LAYOUT=$(echo ${line} | cut -d '|' -f 1)
-    KEYBOARD_NAME=$(echo ${line} | cut -d '|' -f 2)
+	LAYOUT=$(echo ${line} | cut -d '|' -f 1)
+	KEYBOARD_NAME=$(echo ${line} | cut -d '|' -f 2)
 
-    # Find the device ID of the keyboard
-    DEVICE_ID=$(xinput list --id-only "keyboard:""$KEYBOARD_NAME" 2>>~/.temp/autoKBL)
+	# Find the device ID of the keyboard
+	DEVICE_ID=$(xinput list --id-only "keyboard:""$KEYBOARD_NAME" 2>>~/.temp/autoKBL)
 
-    # Check if a device ID was found
-    if [ ! -z "$DEVICE_ID" ]; then
-        echo -e "$HEADER Keyboard $KEYBOARD_NAME detected with device ID $DEVICE_ID." >>~/.temp/autoKBL
-	
-	# Increment 
-	((DEVICE_COUNT++))
-        # Set the keyboard layout
-        setxkbmap -device "$DEVICE_ID" -layout "$LAYOUT"
+	# Check if a device ID was found
+	if [ ! -z "$DEVICE_ID" ]; then
+		echo -e "$KEYBOARD_NAME detected with device ID $DEVICE_ID." >> ~/.temp/autoKBL
 
-        if [ $? -eq 0 ]; then
-            echo -e "$HEADER $KEYBOARD_NAME ($DEVICE_ID) layout set to $LAYOUT."
-        else
-            echo -e "$HEADER Failed to modify keyboard layout for $KEYBOARD_NAME."
-            exit 1
-        fi
-    fi
+		# Increment 
+		((DEVICE_COUNT++))
+		# Set the keyboard layout
+		setxkbmap -device "$DEVICE_ID" -layout "$LAYOUT"
+
+		if [ $? -eq 0 ]; then
+			echo -e "$KEYBOARD_NAME (id=$DEVICE_ID) layout set to $LAYOUT." | tee -a ~/.temp/autoKBL | log
+		else
+			echo -e "Failed to modify keyboard layout for $KEYBOARD_NAME." | tee -a ~/.temp/autoKBL | log
+
+			exit 1
+		fi
+	fi
 done
 
 if [ "$DEVICE_COUNT" -eq "0" ];then
-    echo -e "$HEADER No configured devices detected."
+	echo -e "No configured devices detected." | tee -a ~/.temp/autoKBL | log
 else
-    echo -e "$HEADER $DEVICE_COUNT device(s) setup."
+	echo -e "$DEVICE_COUNT device(s) setup." | tee -a ~/.temp/autoKBL | log
 fi
