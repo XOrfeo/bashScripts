@@ -25,10 +25,12 @@ log()
 # Log the message to the terminal / console
 logc()
 {
-	# Using read for the same reason as for the log function.
-	read -t 0.01 MESSAGE
-	# Prefix the formatted header.
-	echo -e "$HEADER $MESSAGE"
+	if [[ $(id -u) -ne "0" ]]; then
+		# Using read for the same reason as for the log function.
+		read -t 0.01 MESSAGE
+		# Prefix the formatted header.
+		echo -e "$HEADER $MESSAGE"
+	fi
 }
 
 # If the log file doesn't yet exist, create it. Then write the current timestamp to it.
